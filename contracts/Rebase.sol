@@ -2,10 +2,10 @@
 
 pragma solidity 0.7.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../access/Ownable.sol";
+import "../contracts/math/Math.sol";
+import "../contracts/math/SafeMath.sol";
+import "../contracts/ERC20/ERC20.sol";
 import "../contracts/interfaces/IRebaseFactory.sol";
 import "../contracts/interfaces/IRebasePair.sol";
 import "../contracts/interfaces/IRebaseRouter01.sol";
@@ -17,9 +17,12 @@ contract Rebase is ERC20, Ownable {
 
     uint256 private constant DECIMALS = 18;
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 1000000000 * 10**DECIMALS;
-    uint256 private constant TOTAL_GONS = MAX_UINT256 - (MAX_UINT256 % INITIAL_FRAGMENTS_SUPPLY);
-    address private constant DEAD_ADDR = 0x000000000000000000000000000000000000dEaD;
+    uint256 private constant INITIAL_FRAGMENTS_SUPPLY =
+        1000000000 * 10 ** DECIMALS;
+    uint256 private constant TOTAL_GONS =
+        MAX_UINT256 - (MAX_UINT256 % INITIAL_FRAGMENTS_SUPPLY);
+    address private constant DEAD_ADDR =
+        0x000000000000000000000000000000000000dEaD;
     uint256 private constant MAX_SUPPLY = ~uint256(0);
     uint256 private constant SECONDS_PER_DAY = 86400;
 
@@ -39,28 +42,45 @@ contract Rebase is ERC20, Ownable {
 
     IRebaseRouter02 public router;
     address public pair;
-    
+
     address[] public _markerPairs;
     uint256 public _markerPairCount;
 
     mapping(address => bool) public _isFeeExempt;
     mapping(address => bool) public automatedMarketMakerPairs;
-    
+
     bool public swapEnabled = true;
     bool public autoRebaseEnabled = true;
     bool public transferFeeEnabled = true;
     bool public taxBracketFeeEnabled = false;
     bool public launchFeeEnabled = true;
 
-    uint256 public swapThreshold = calculateAmount(INITIAL_FRAGMENTS_SUPPLY, SWAP_THRESHOLD, SWAP_THRESHOLD_DENOM); // default 0.1%
-    uint256 public maxSellTransactionAmount = calculateAmount(INITIAL_FRAGMENTS_SUPPLY, MAX_TRANSACTION, MAX_TRANSACTION_DENOM);   // default 0.5% of totalSupply.  
-    uint256 public maxBuyTransactionAmount = calculateAmount(INITIAL_FRAGMENTS_SUPPLY, MAX_TRANSACTION, MAX_TRANSACTION_DENOM);    // default 0.5% of totalSupply.  
-    uint256 public nextRebase = block.timestamp + 30 days;  // to be updated once confirmed listing time
+    uint256 public swapThreshold =
+        calculateAmount(
+            INITIAL_FRAGMENTS_SUPPLY,
+            SWAP_THRESHOLD,
+            SWAP_THRESHOLD_DENOM
+        ); // default 0.1%
+    uint256 public maxSellTransactionAmount =
+        calculateAmount(
+            INITIAL_FRAGMENTS_SUPPLY,
+            MAX_TRANSACTION,
+            MAX_TRANSACTION_DENOM
+        ); // default 0.5% of totalSupply.
+    uint256 public maxBuyTransactionAmount =
+        calculateAmount(
+            INITIAL_FRAGMENTS_SUPPLY,
+            MAX_TRANSACTION,
+            MAX_TRANSACTION_DENOM
+        ); // default 0.5% of totalSupply.
+    uint256 public nextRebase = block.timestamp + 30 days; // to be updated once confirmed listing time
     uint256 public rebaseCount = 0;
-    
+
     // Fee receiver
-    address public liquidityReceiver = 0x1F2C03A848f9F70dd66a45FFC56cFb32a53D01c1;
-    address public treasuryReceiver = 0x1BeFa4eA1D80fd83d7b9C730280d7085E74756FF;
+    address public liquidityReceiver =
+        0x1F2C03A848f9F70dd66a45FFC56cFb32a53D01c1;
+    address public treasuryReceiver =
+        0x1BeFa4eA1D80fd83d7b9C730280d7085E74756FF;
     address public rfvReceiver = 0xd00710Da275f683D38C2892455993cC0D87f09C2;
 
     // Fee
@@ -87,7 +107,6 @@ contract Rebase is ERC20, Ownable {
     mapping(address => mapping(address => uint256)) private _allowedFragments;
 
     constructor() ERC20("Rebase Finance", "REBASE") {
-
         router = IRebaseRouter02(0xddD362624ACb6f5AE6F920E75C7e92871dED81f8);
         pair = IRebaseFactory(router.factory()).createPair(
             address(this),
@@ -118,7 +137,10 @@ contract Rebase is ERC20, Ownable {
         return _totalSupply;
     }
 
-    function allowance(address owner_, address spender) public view override returns (uint256) {
+    function allowance(
+        address owner_,
+        address spender
+    ) public view override returns (uint256) {
         return _allowedFragments[owner_][spender];
     }
 
@@ -134,34 +156,45 @@ contract Rebase is ERC20, Ownable {
         return nextRebase <= block.timestamp;
     }
 
-    function shouldTakeFee(address from, address to) internal view returns (bool) {
+    function shouldTakeFee(
+        address from,
+        address to
+    ) internal view returns (bool) {
         if (_isFeeExempt[from] || _isFeeExempt[to]) {
             return false;
         } else if (transferFeeEnabled) {
             return true;
         } else {
             return (automatedMarketMakerPairs[from] ||
-            automatedMarketMakerPairs[to]);
+                automatedMarketMakerPairs[to]);
         }
     }
 
     function shouldSwapBack() internal view returns (bool) {
         return
-        !automatedMarketMakerPairs[msg.sender] &&
-        !inSwap && swapEnabled &&
-        _gonBalances[address(this)].div(_gonsPerFragment) >= swapThreshold;
+            !automatedMarketMakerPairs[msg.sender] &&
+            !inSwap &&
+            swapEnabled &&
+            _gonBalances[address(this)].div(_gonsPerFragment) >= swapThreshold;
     }
 
-    function getGonBalances() external view returns (bool thresholdReturn, uint256 gonBalanceReturn ) {
-        thresholdReturn  = _gonBalances[address(this)].div(_gonsPerFragment) >= swapThreshold;
+    function getGonBalances()
+        external
+        view
+        returns (bool thresholdReturn, uint256 gonBalanceReturn)
+    {
+        thresholdReturn =
+            _gonBalances[address(this)].div(_gonsPerFragment) >= swapThreshold;
         gonBalanceReturn = _gonBalances[address(this)].div(_gonsPerFragment);
     }
 
     function getCirculatingSupply() public view returns (uint256) {
         return
-        (TOTAL_GONS.sub(_gonBalances[DEAD_ADDR]).sub(_gonBalances[address(0)])).div(
-            _gonsPerFragment
-        );
+            (
+                TOTAL_GONS.sub(_gonBalances[DEAD_ADDR]).sub(
+                    _gonBalances[address(0)]
+                )
+            ).div(_gonsPerFragment);
     }
 
     function getTokensInLPCirculation() public view returns (uint256) {
@@ -175,7 +208,8 @@ contract Rebase is ERC20, Ownable {
 
         for (uint256 i = 0; i < _markerPairs.length; i++) {
             iDexFeeCalculator = IRebasePair(_markerPairs[i]);
-            (reserve0, reserve1, blockTimestampLast) = iDexFeeCalculator.getReserves();
+            (reserve0, reserve1, blockTimestampLast) = iDexFeeCalculator
+                .getReserves();
 
             token0 = iDexFeeCalculator.token0();
             token1 = iDexFeeCalculator.token1();
@@ -191,7 +225,9 @@ contract Rebase is ERC20, Ownable {
         return LPTotal;
     }
 
-    function getCurrentTaxBracket(address _address) public view returns (uint256) {
+    function getCurrentTaxBracket(
+        address _address
+    ) public view returns (uint256) {
         //gets the total balance of the user
         uint256 userBalance = balanceOf(_address);
 
@@ -213,13 +249,20 @@ contract Rebase is ERC20, Ownable {
         }
     }
 
-    function transfer(address to, uint256 value) public override returns (bool) {
+    function transfer(
+        address to,
+        uint256 value
+    ) public override returns (bool) {
         require(to != address(0), "Zero address");
         _transferFrom(msg.sender, to, value);
         return true;
     }
 
-    function basicTransfer(address from, address to, uint256 amount) internal returns (bool) {
+    function basicTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         uint256 gonAmount = amount.mul(_gonsPerFragment);
         _gonBalances[from] = _gonBalances[from].sub(gonAmount);
         _gonBalances[to] = _gonBalances[to].add(gonAmount);
@@ -229,15 +272,25 @@ contract Rebase is ERC20, Ownable {
         return true;
     }
 
-    function _transferFrom(address sender, address recipient, uint256 amount) internal returns (bool) {
+    function _transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal returns (bool) {
         bool excludedAccount = _isFeeExempt[sender] || _isFeeExempt[recipient];
 
         if (automatedMarketMakerPairs[recipient] && !excludedAccount) {
-            require(amount <= maxSellTransactionAmount, "Exceeded max sell limit");
+            require(
+                amount <= maxSellTransactionAmount,
+                "Exceeded max sell limit"
+            );
         }
 
         if (automatedMarketMakerPairs[sender] && !excludedAccount) {
-            require(amount <= maxBuyTransactionAmount, "Exceeded max buy limit");
+            require(
+                amount <= maxBuyTransactionAmount,
+                "Exceeded max buy limit"
+            );
         }
 
         if (inSwap) {
@@ -246,19 +299,25 @@ contract Rebase is ERC20, Ownable {
 
         uint256 gonAmount = amount.mul(_gonsPerFragment);
 
-        if(shouldSwapBack()) {
+        if (shouldSwapBack()) {
             swapBack();
         }
 
         _gonBalances[sender] = _gonBalances[sender].sub(gonAmount);
 
         uint256 gonAmountReceived = shouldTakeFee(sender, recipient)
-        ? takeFee(sender, recipient, gonAmount)
-        : gonAmount;
+            ? takeFee(sender, recipient, gonAmount)
+            : gonAmount;
 
-        _gonBalances[recipient] = _gonBalances[recipient].add(gonAmountReceived);
+        _gonBalances[recipient] = _gonBalances[recipient].add(
+            gonAmountReceived
+        );
 
-        emit Transfer(sender, recipient, gonAmountReceived.div(_gonsPerFragment));
+        emit Transfer(
+            sender,
+            recipient,
+            gonAmountReceived.div(_gonsPerFragment)
+        );
 
         if (shouldRebase() && autoRebaseEnabled) {
             rebase();
@@ -267,11 +326,17 @@ contract Rebase is ERC20, Ownable {
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 value) public override returns (bool) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) public override returns (bool) {
         require(to != address(0), "Zero address");
 
         if (_allowedFragments[from][msg.sender] != uint256(-1)) {
-            _allowedFragments[from][msg.sender] = _allowedFragments[from][msg.sender].sub(value, "Insufficient Allowance");
+            _allowedFragments[from][msg.sender] = _allowedFragments[from][
+                msg.sender
+            ].sub(value, "Insufficient Allowance");
         }
 
         _transferFrom(from, to, value);
@@ -318,10 +383,20 @@ contract Rebase is ERC20, Ownable {
 
     function swapBack() internal swapping {
         uint256 ethBalance = address(this).balance;
-        uint256 tokenBalance = _gonBalances[address(this)].div(_gonsPerFragment);
-        uint256 amountToLiquify = calculateAmount(tokenBalance, LIQUIDITY_FEE, totalFee);
+        uint256 tokenBalance = _gonBalances[address(this)].div(
+            _gonsPerFragment
+        );
+        uint256 amountToLiquify = calculateAmount(
+            tokenBalance,
+            LIQUIDITY_FEE,
+            totalFee
+        );
         uint256 amountToRFV = calculateAmount(tokenBalance, RFV_FEE, totalFee);
-        uint256 amountToTreasury = calculateAmount(tokenBalance, TREASURY_FEE, totalFee);
+        uint256 amountToTreasury = calculateAmount(
+            tokenBalance,
+            TREASURY_FEE,
+            totalFee
+        );
 
         swapAndLiquify(amountToLiquify);
         swapTokensForEth(amountToRFV.add(amountToTreasury), address(this));
@@ -329,67 +404,110 @@ contract Rebase is ERC20, Ownable {
         uint256 newEthBalance = address(this).balance.sub(ethBalance);
 
         (bool success, ) = payable(rfvReceiver).call{
-            value: calculateAmount(newEthBalance, RFV_FEE, RFV_FEE.add(TREASURY_FEE)),
+            value: calculateAmount(
+                newEthBalance,
+                RFV_FEE,
+                RFV_FEE.add(TREASURY_FEE)
+            ),
             gas: 300000
         }("");
 
         (success, ) = payable(treasuryReceiver).call{
-            value: calculateAmount(newEthBalance, TREASURY_FEE, RFV_FEE.add(TREASURY_FEE)),
+            value: calculateAmount(
+                newEthBalance,
+                TREASURY_FEE,
+                RFV_FEE.add(TREASURY_FEE)
+            ),
             gas: 300000
         }("");
-        
-        emit SwapBack(tokenBalance, amountToLiquify, amountToRFV, amountToTreasury);
+
+        emit SwapBack(
+            tokenBalance,
+            amountToLiquify,
+            amountToRFV,
+            amountToTreasury
+        );
     }
 
-    function takeFee(address sender,  address recipient, uint256 gonAmount) internal returns (uint256) {
+    function takeFee(
+        address sender,
+        address recipient,
+        uint256 gonAmount
+    ) internal returns (uint256) {
         uint256 _totalFee = totalFee;
         uint256 _burnFee = 0;
 
         // Additional fees for sell transactions
         if (automatedMarketMakerPairs[recipient]) {
             // Add launch fee when enabled
-            if(launchFeeEnabled) 
-                _totalFee = _totalFee.add(launchFee);
+            if (launchFeeEnabled) _totalFee = _totalFee.add(launchFee);
 
             // Add tax bracket if enabled, only applicable to sell
-            if (taxBracketFeeEnabled) 
+            if (taxBracketFeeEnabled)
                 _totalFee = _totalFee.add(getCurrentTaxBracket(sender));
 
             _burnFee = calculateAmount(gonAmount, BURN_FEE, FEE_DENOMINATOR);
         }
 
         // Send burn fee to dead address
-        if(_burnFee > 0){
+        if (_burnFee > 0) {
             _gonBalances[DEAD_ADDR] = _gonBalances[DEAD_ADDR].add(_burnFee);
             emit Transfer(sender, DEAD_ADDR, _burnFee.div(_gonsPerFragment));
         }
 
-        uint256 feeAmount = calculateAmount(gonAmount, _totalFee, FEE_DENOMINATOR);
-        _gonBalances[address(this)] = _gonBalances[address(this)].add(feeAmount);
+        uint256 feeAmount = calculateAmount(
+            gonAmount,
+            _totalFee,
+            FEE_DENOMINATOR
+        );
+        _gonBalances[address(this)] = _gonBalances[address(this)].add(
+            feeAmount
+        );
 
         emit Transfer(sender, address(this), feeAmount.div(_gonsPerFragment));
         return gonAmount.sub(feeAmount.add(_burnFee));
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
+    function decreaseAllowance(
+        address spender,
+        uint256 subtractedValue
+    ) public override returns (bool) {
         uint256 oldValue = _allowedFragments[msg.sender][spender];
         if (subtractedValue >= oldValue) {
             _allowedFragments[msg.sender][spender] = 0;
         } else {
-            _allowedFragments[msg.sender][spender] = oldValue.sub(subtractedValue);
+            _allowedFragments[msg.sender][spender] = oldValue.sub(
+                subtractedValue
+            );
         }
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+        emit Approval(
+            msg.sender,
+            spender,
+            _allowedFragments[msg.sender][spender]
+        );
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
-        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][spender].add(addedValue);
+    function increaseAllowance(
+        address spender,
+        uint256 addedValue
+    ) public override returns (bool) {
+        _allowedFragments[msg.sender][spender] = _allowedFragments[msg.sender][
+            spender
+        ].add(addedValue);
 
-        emit Approval(msg.sender, spender, _allowedFragments[msg.sender][spender]);
+        emit Approval(
+            msg.sender,
+            spender,
+            _allowedFragments[msg.sender][spender]
+        );
         return true;
     }
 
-    function approve(address spender, uint256 value) public override returns (bool) {
+    function approve(
+        address spender,
+        uint256 value
+    ) public override returns (bool) {
         _allowedFragments[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
         return true;
@@ -398,7 +516,11 @@ contract Rebase is ERC20, Ownable {
     function rebase() internal {
         if (!inSwap) {
             uint256 circulatingSupply = getCirculatingSupply();
-            uint256 supplyDelta = calculateAmount(circulatingSupply, REWARD_YIELD, REWARD_YIELD_DENOM);
+            uint256 supplyDelta = calculateAmount(
+                circulatingSupply,
+                REWARD_YIELD,
+                REWARD_YIELD_DENOM
+            );
 
             coreRebase(supplyDelta);
         }
@@ -435,11 +557,18 @@ contract Rebase is ERC20, Ownable {
 
     function manualRebase() external onlyOwner {
         require(!inSwap, "Rebasing, try again");
-        require(nextRebase <= block.timestamp, "Not in rebase allowed timeframe");
+        require(
+            nextRebase <= block.timestamp,
+            "Not in rebase allowed timeframe"
+        );
 
         uint256 circulatingSupply = getCirculatingSupply();
-        uint256 supplyDelta = calculateAmount(circulatingSupply, REWARD_YIELD, REWARD_YIELD_DENOM);
-        
+        uint256 supplyDelta = calculateAmount(
+            circulatingSupply,
+            REWARD_YIELD,
+            REWARD_YIELD_DENOM
+        );
+
         updateMaxTransaction();
         updateSwapThreshold();
 
@@ -447,18 +576,30 @@ contract Rebase is ERC20, Ownable {
         coreRebase(supplyDelta);
     }
 
-    function calculateAmount(uint256 amount, uint256 numerator, uint256 denumerator) internal pure returns (uint256){
+    function calculateAmount(
+        uint256 amount,
+        uint256 numerator,
+        uint256 denumerator
+    ) internal pure returns (uint256) {
         return amount.mul(numerator).div(denumerator);
     }
 
     function updateSwapThreshold() internal {
-        uint256 threshold = calculateAmount(_totalSupply, SWAP_THRESHOLD, SWAP_THRESHOLD_DENOM);
+        uint256 threshold = calculateAmount(
+            _totalSupply,
+            SWAP_THRESHOLD,
+            SWAP_THRESHOLD_DENOM
+        );
 
         swapThreshold = threshold;
     }
 
     function updateMaxTransaction() internal {
-        uint256 maxTransaction = calculateAmount(_totalSupply, MAX_TRANSACTION, MAX_TRANSACTION_DENOM);
+        uint256 maxTransaction = calculateAmount(
+            _totalSupply,
+            MAX_TRANSACTION,
+            MAX_TRANSACTION_DENOM
+        );
 
         maxBuyTransactionAmount = maxTransaction;
         maxSellTransactionAmount = maxTransaction;
@@ -469,10 +610,8 @@ contract Rebase is ERC20, Ownable {
         uint256 dayCount = rebaseCount.div(totalRebasePerDay);
         uint256 totalLaunchFee = LAUNCH_FEE_DURATION.mul(LAUNCH_FEE_MULTIPLIER);
 
-        if(dayCount < LAUNCH_FEE_DURATION) {
-            launchFee = totalLaunchFee.sub(
-                dayCount.mul(LAUNCH_FEE_MULTIPLIER)
-            );
+        if (dayCount < LAUNCH_FEE_DURATION) {
+            launchFee = totalLaunchFee.sub(dayCount.mul(LAUNCH_FEE_MULTIPLIER));
         } else {
             launchFee = 0;
             launchFeeEnabled = false;
@@ -480,7 +619,10 @@ contract Rebase is ERC20, Ownable {
         }
     }
 
-    function setAutomatedMarketMakerPair(address _pair, bool _bool) public onlyOwner {
+    function setAutomatedMarketMakerPair(
+        address _pair,
+        bool _bool
+    ) public onlyOwner {
         automatedMarketMakerPairs[_pair] = _bool;
 
         if (_bool) {
@@ -511,16 +653,30 @@ contract Rebase is ERC20, Ownable {
         emit SetSwapBackEnabled(_bool);
     }
 
-    function setFeeReceivers(address _liquidityReceiver, address _treasuryReceiver, address _rfvReceiver) external onlyOwner {
-        require(_liquidityReceiver != address(0), "liquidityReceiver zero address");
-        require(_treasuryReceiver != address(0), "treasuryReceiver zero address");
+    function setFeeReceivers(
+        address _liquidityReceiver,
+        address _treasuryReceiver,
+        address _rfvReceiver
+    ) external onlyOwner {
+        require(
+            _liquidityReceiver != address(0),
+            "liquidityReceiver zero address"
+        );
+        require(
+            _treasuryReceiver != address(0),
+            "treasuryReceiver zero address"
+        );
         require(_rfvReceiver != address(0), "rfvReceiver zero address");
-        
+
         liquidityReceiver = _liquidityReceiver;
         treasuryReceiver = _treasuryReceiver;
         rfvReceiver = _rfvReceiver;
 
-        emit SetFeeReceivers(_liquidityReceiver, _treasuryReceiver, _rfvReceiver);
+        emit SetFeeReceivers(
+            _liquidityReceiver,
+            _treasuryReceiver,
+            _rfvReceiver
+        );
     }
 
     function clearStuckBalance(address _receiver) external onlyOwner {
@@ -530,8 +686,13 @@ contract Rebase is ERC20, Ownable {
         emit ClearStuckBalance(balance, _receiver, block.timestamp);
     }
 
-    function rescueToken(address tokenAddress, address to) external onlyOwner returns (bool success) {
-        uint256 _contractBalance = IERC20(tokenAddress).balanceOf(address(this));
+    function rescueToken(
+        address tokenAddress,
+        address to
+    ) external onlyOwner returns (bool success) {
+        uint256 _contractBalance = IERC20(tokenAddress).balanceOf(
+            address(this)
+        );
 
         emit RescueToken(tokenAddress, to, _contractBalance, block.timestamp);
         return ERC20(tokenAddress).transfer(to, _contractBalance);
@@ -580,11 +741,33 @@ contract Rebase is ERC20, Ownable {
         emit SetPair(_pair, block.timestamp);
     }
 
-    event SwapBack(uint256 contractTokenBalance, uint256 amountToLiquify, uint256 amountToRFV, uint256 amountToTreasury);
-    event SwapAndLiquify(uint256 tokensSwapped, uint256 EthReceived, uint256 tokensIntoLiqudity);
-    event SetFeeReceivers(address indexed _liquidityReceiver, address indexed _treasuryReceiver, address indexed _riskFreeValueReceiver);
-    event ClearStuckBalance(uint256 indexed amount, address indexed receiver, uint256 indexed time);
-    event RescueToken(address indexed tokenAddress, address indexed sender, uint256 indexed tokens, uint256 time);
+    event SwapBack(
+        uint256 contractTokenBalance,
+        uint256 amountToLiquify,
+        uint256 amountToRFV,
+        uint256 amountToTreasury
+    );
+    event SwapAndLiquify(
+        uint256 tokensSwapped,
+        uint256 EthReceived,
+        uint256 tokensIntoLiqudity
+    );
+    event SetFeeReceivers(
+        address indexed _liquidityReceiver,
+        address indexed _treasuryReceiver,
+        address indexed _riskFreeValueReceiver
+    );
+    event ClearStuckBalance(
+        uint256 indexed amount,
+        address indexed receiver,
+        uint256 indexed time
+    );
+    event RescueToken(
+        address indexed tokenAddress,
+        address indexed sender,
+        uint256 indexed tokens,
+        uint256 time
+    );
     event SetAutoRebaseEnabled(bool indexed value, uint256 indexed time);
     event DisableLaunchFee(uint256 indexed time);
     event SetTaxBracketEnabled(bool indexed value, uint256 indexed time);
