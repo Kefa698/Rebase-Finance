@@ -106,8 +106,8 @@ contract Rebase is ERC20, Ownable {
     mapping(address => uint256) private _gonBalances;
     mapping(address => mapping(address => uint256)) private _allowedFragments;
 
-    constructor() ERC20("Rebase Finance", "REBASE") {
-        router = IRebaseRouter02(0xddD362624ACb6f5AE6F920E75C7e92871dED81f8);
+    constructor() ERC20("Accumulator", "ACC") {
+        router = IRebaseRouter02(0x6a3ee34d88186436C310667571FF3F1d1539F721);
         pair = IRebaseFactory(router.factory()).createPair(
             address(this),
             router.WETH()
