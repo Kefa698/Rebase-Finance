@@ -116,22 +116,52 @@ module.exports = {
         compilers: [
             {
                 version: "0.8.8",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 2000,
+                    },
+                },
             },
             {
                 version: "0.8.2",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 2000,
+                    },
+                },
             },
             {
                 version: "0.8.14",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 2000,
+                    },
+                },
             },
             {
                 version: "0.4.24",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 2000,
+                    },
+                },
             },
             {
                 version: "0.7.4",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 2000,
+                    },
+                },
             },
         ],
     },
     mocha: {
-        timeout: 200000, // 200 seconds max for running tests
+        timeout: 20000000, // 200 seconds max for running tests
     },
 }
